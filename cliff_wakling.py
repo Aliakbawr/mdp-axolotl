@@ -187,6 +187,12 @@ class CliffWalking(CliffWalkingEnv):
                 np.array(pygame.surfarray.pixels3d(self.window_surface)), axes=(1, 0, 2)
             )
 
+def value_iteration(self):
+    pass
+
+def policy_iteration(self):
+    pass
+
 
 # Create an environment
 env = CliffWalking(render_mode="human")
@@ -194,6 +200,11 @@ observation, info = env.reset(seed=30)
 
 # Define the maximum number of iterations
 max_iter_number = 1000
+
+# Creation Of Policies
+value_iteration_res = value_iteration()
+policy = policy_iteration()
+
 
 for __ in range(max_iter_number):
     # TODO: Implement the agent policy here
@@ -204,6 +215,7 @@ for __ in range(max_iter_number):
 
     # Perform the action and receive feedback from the environment
     next_state, reward, done, truncated, info = env.step(action)
+    # print(f'{next_state,reward, done, truncated, info}')
 
     if done or truncated:
         observation, info = env.reset()
