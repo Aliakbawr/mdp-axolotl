@@ -1,6 +1,5 @@
 # Import nessary libraries
 import math
-
 import numpy as np
 import gymnasium as gym
 from gymnasium.envs.toy_text.cliffwalking import CliffWalkingEnv
@@ -192,103 +191,83 @@ class CliffWalking(CliffWalkingEnv):
             )
 
 
-def policy_iteration(env, gamma, theta):
-    # Initialize the value function
-    v = np.zeros(env.nS)
+def policy_evaluation(policy):
+    Vp = np.zeros(env.nS)
+    Qp = np.zeros((env.nS, env.nA)) / env.nA
+    converged = False
+    t = 1
 
-    # Initialize the policy
-    policy = np.ones((env.nS, env.nA)) / env.nA
 
-    for state in range (env.nS):
-        check = False
-        for i in range(10):
-            x, y = env.cliff_positions[i]
-            s = 12 * x + y
-            if s == state:
-                check = True
-                break
-        if not check:
-            for action in range(env.nA):
-                x = env.P[state][action]
-                new_reward = -math.sqrt(math.pow(int(state / 12) - 3, 2) + math.pow(state % 12 - 11, 2))
-                y = list(x[0])
-                y[2] = new_reward
-                x[0] = tuple(y)
-                env.P[state][action] = x
-
-    # Repeat until convergence
-    while True:
-        # Evaluate the current policy
-        v_prime = np.zeros(env.nS)
-
+    while t < 10000 and not converged:
+        delta = 0
         for state in range(env.nS):
-            # Calculate the maximum expected value
-            max_v = -np.inf
+            # if cliffs.__contains__(state):
+            #     Vp[state] = -1
+            #     break
 
+            old_Vp = Vp[state]
             for action in range(env.nA):
-                # Calculate the expected value given action
-                v_action = 0
-
+                ans = 0
                 for probability, next_state, reward, done in env.P[state][action]:
-                    v_action += probability * (reward + gamma * v[next_state])
+                    ans += probability*(reward+gamma*Vp[next_state])
 
-                # Update the maximum expected value
-                if v_action > max_v:
-                    max_v = v_action
+                Qp[state][action] = ans
+            Vp[state] = Qp[state][int(policy[state])]
 
-            # Set the value of state
-            v_prime[state] = max_v
+            # Calculate the change in utility value
+            delta = np.max(np.abs(old_Vp - Vp[state]))
 
-        # Calculate the optimal policy
-        policy_prime = np.zeros((env.nS, env.nA))
+        if delta < theta:
+            converged = True
 
+    return Vp, Qp
+
+
+def policy_iteration():
+
+    policy = np.zeros(env.nS)
+    t = 1
+    converged = False
+    while t < 1000 and not converged:
+        old_policy = policy
+        Vp, Qp = policy_evaluation(policy)
         for state in range(env.nS):
-            # Find the action that maximizes the expected value
-            max_v = -np.inf
-            best_action = -1
-
+            act = -1
+            maxQ = -np.inf
             for action in range(env.nA):
-                # Calculate the expected value given action
-                v_action = 0
-
-                for probability, next_state, reward, done in env.P[state][action]:
-                    v_action += probability * (reward + gamma * v_prime[next_state])
-
-                # Update the maximum expected value
-                if v_action > max_v:
+                if Qp[state][action] > maxQ:
                     if not (state >= 0) & (state < 12) & (action == 0):
                         if not (state > 35) & (state < 48) & (action == 2):
                             if not (state % 12 == 11) & (action == 1):
                                 if not (state % 12 == 0) & (action == 3):
-                                    max_v = v_action
-                                    best_action = action
+                                    maxQ = Qp[state][action]
+                                    act = action
 
-            # Set the policy
-            policy_prime[state] = best_action
+            policy[state] = act
 
-        # Policy improvement step
-        delta = np.max(np.abs(policy - policy_prime))
-
+        delta = np.max(np.abs(policy - old_policy))
         if delta < theta:
-            break
+            converged = True
+        t = t+1
 
-        # Update the policy
-        policy = policy_prime
-
-    return policy, v
+    return policy
 
 
 # Create an environment
 env = CliffWalking(render_mode="human")
 observation, info = env.reset(seed=30)
+cliffs = list()
+for i in range(10):
+    a = env.cliff_positions
+    cliffs.append(a)
 
 gamma = 0.99
 theta = 1e-4
 
-policy, v = policy_iteration(env, gamma, theta)
+Policy= policy_iteration()
 
 print("Optimal policy:")
-print(policy)
+print(Policy)
 
 # Define the maximum number of iterations
 max_iter_number = 1000
@@ -296,7 +275,7 @@ done = False
 truncated = False
 reward = 0
 d = 0
-Action = policy[observation][0]
+Action = Policy[observation]
 for i in range(max_iter_number):
     print("----------------"f'{i}'"----------------")
 
@@ -304,8 +283,8 @@ for i in range(max_iter_number):
         # Perform the action and receive feedback from the environment
         next_state, reward, done, truncated, info = env.step(Action)
         print(f'{next_state,reward, done, truncated, info}')
-        Action = policy[next_state][0]
-        if info['prob']== 1.0:
+        Action = Policy[next_state]
+        if info['prob'] == 1.0:
             break
         if done:
             d = d + 1
