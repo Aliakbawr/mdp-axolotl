@@ -1,4 +1,6 @@
 # Import nessary libraries
+import math
+
 import numpy as np
 import gymnasium as gym
 from gymnasium.envs.toy_text.cliffwalking import CliffWalkingEnv
@@ -12,6 +14,7 @@ RIGHT = 1
 DOWN = 2
 LEFT = 3
 image_path = path.join(path.dirname(gym.__file__), "envs", "toy_text")
+
 
 class CliffWalking(CliffWalkingEnv):
     def __init__(self, is_hardmode=True, num_cliffs=10, *args, **kwargs):
@@ -59,7 +62,8 @@ class CliffWalking(CliffWalkingEnv):
 
         terminal_state = (self.shape[0] - 1, self.shape[1] - 1)
         is_terminated = tuple(new_position) == terminal_state
-        return [(1 / 3, new_state, -1, is_terminated)]
+
+        return [(1 / 3, new_state, -0.2, is_terminated)]
 
     # DFS to check that it's a valid path.
     def is_valid(self):
@@ -88,13 +92,13 @@ class CliffWalking(CliffWalkingEnv):
         if self.is_hardmode:
             match action:
                 case 0:
-                    action = np.random.choice([0, 1, 3], p=[1 / 3, 1 / 3, 1 / 3])
+                    action = np.random.choice([0, 1, 3], p=[1, 0, 0])
                 case 1:
-                    action = np.random.choice([0, 1, 2], p=[1 / 3, 1 / 3, 1 / 3])
+                    action = np.random.choice([0, 1, 2], p=[0, 1, 0])
                 case 2:
-                    action = np.random.choice([1, 2, 3], p=[1 / 3, 1 / 3, 1 / 3])
+                    action = np.random.choice([1, 2, 3], p=[0, 1, 0])
                 case 3:
-                    action = np.random.choice([0, 2, 3], p=[1 / 3, 1 / 3, 1 / 3])
+                    action = np.random.choice([0, 2, 3], p=[0, 0, 1])
 
         return super().step(action)
 
@@ -187,38 +191,128 @@ class CliffWalking(CliffWalkingEnv):
                 np.array(pygame.surfarray.pixels3d(self.window_surface)), axes=(1, 0, 2)
             )
 
-def value_iteration(self):
-    pass
 
-def policy_iteration(self):
-    pass
+def policy_iteration(env, gamma, theta):
+    # Initialize the value function
+    v = np.zeros(env.nS)
+
+    # Initialize the policy
+    policy = np.ones((env.nS, env.nA)) / env.nA
+
+    for state in range (env.nS):
+        check = False
+        for i in range(10):
+            x, y = env.cliff_positions[i]
+            s = 12 * x + y
+            if s == state:
+                check = True
+                break
+        if not check:
+            for action in range(env.nA):
+                x = env.P[state][action]
+                new_reward = -math.sqrt(math.pow(int(state / 12) - 3, 2) + math.pow(state % 12 - 11, 2))
+                y = list(x[0])
+                y[2] = new_reward
+                x[0] = tuple(y)
+                env.P[state][action] = x
+
+    # Repeat until convergence
+    while True:
+        # Evaluate the current policy
+        v_prime = np.zeros(env.nS)
+
+        for state in range(env.nS):
+            # Calculate the maximum expected value
+            max_v = -np.inf
+
+            for action in range(env.nA):
+                # Calculate the expected value given action
+                v_action = 0
+
+                for probability, next_state, reward, done in env.P[state][action]:
+                    v_action += probability * (reward + gamma * v[next_state])
+
+                # Update the maximum expected value
+                if v_action > max_v:
+                    max_v = v_action
+
+            # Set the value of state
+            v_prime[state] = max_v
+
+        # Calculate the optimal policy
+        policy_prime = np.zeros((env.nS, env.nA))
+
+        for state in range(env.nS):
+            # Find the action that maximizes the expected value
+            max_v = -np.inf
+            best_action = -1
+
+            for action in range(env.nA):
+                # Calculate the expected value given action
+                v_action = 0
+
+                for probability, next_state, reward, done in env.P[state][action]:
+                    v_action += probability * (reward + gamma * v_prime[next_state])
+
+                # Update the maximum expected value
+                if v_action > max_v:
+                    if not (state >= 0) & (state < 12) & (action == 0):
+                        if not (state > 35) & (state < 48) & (action == 2):
+                            if not (state % 12 == 11) & (action == 1):
+                                if not (state % 12 == 0) & (action == 3):
+                                    max_v = v_action
+                                    best_action = action
+
+            # Set the policy
+            policy_prime[state] = best_action
+
+        # Policy improvement step
+        delta = np.max(np.abs(policy - policy_prime))
+
+        if delta < theta:
+            break
+
+        # Update the policy
+        policy = policy_prime
+
+    return policy, v
 
 
 # Create an environment
 env = CliffWalking(render_mode="human")
 observation, info = env.reset(seed=30)
 
+gamma = 0.99
+theta = 1e-4
+
+policy, v = policy_iteration(env, gamma, theta)
+
+print("Optimal policy:")
+print(policy)
+
 # Define the maximum number of iterations
 max_iter_number = 1000
+done = False
+truncated = False
+reward = 0
+d = 0
+Action = policy[observation][0]
+for i in range(max_iter_number):
+    print("----------------"f'{i}'"----------------")
 
-# Creation Of Policies
-value_iteration_res = value_iteration()
-policy = policy_iteration()
+    while True:
+        # Perform the action and receive feedback from the environment
+        next_state, reward, done, truncated, info = env.step(Action)
+        print(f'{next_state,reward, done, truncated, info}')
+        Action = policy[next_state][0]
+        if info['prob']== 1.0:
+            break
+        if done:
+            d = d + 1
+            env.reset()
+            break
 
 
-for __ in range(max_iter_number):
-    # TODO: Implement the agent policy here
-    # Note: .sample() is used to sample random action from the environment's action space
-
-    # Choose an action (Replace this random action with your agent's policy)
-    action = env.action_space.sample()
-
-    # Perform the action and receive feedback from the environment
-    next_state, reward, done, truncated, info = env.step(action)
-    # print(f'{next_state,reward, done, truncated, info}')
-
-    if done or truncated:
-        observation, info = env.reset()
-
+print(d)
 # Close the environment
 env.close()
