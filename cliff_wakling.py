@@ -1,11 +1,9 @@
-# Import nessary libraries
-import math
+# Import necessary libraries
 import numpy as np
 import gymnasium as gym
 from gymnasium.envs.toy_text.cliffwalking import CliffWalkingEnv
 from gymnasium.error import DependencyNotInstalled
 from os import path
-
 
 # Do not change this class
 UP = 0
@@ -61,6 +59,8 @@ class CliffWalking(CliffWalkingEnv):
 
         terminal_state = (self.shape[0] - 1, self.shape[1] - 1)
         is_terminated = tuple(new_position) == terminal_state
+
+
 
         return [(1 / 3, new_state, -0.2, is_terminated)]
 
@@ -224,7 +224,7 @@ def policy_evaluation(policy):
 
         if delta < theta:
             converged = True
-        t+=1
+        t += 1
 
     return Vp, Qp
 
@@ -260,7 +260,7 @@ def policy_iteration():
 
 
 # Create an environment
-env = CliffWalking(render_mode="fsfvv")
+env = CliffWalking(render_mode="human")
 observation, info = env.reset(seed=30)
 cliffs = list()
 for i in range(10):
