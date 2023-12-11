@@ -30,9 +30,9 @@ class CliffWalking(CliffWalkingEnv):
                 new_col = np.random.randint(0, 11)
                 state = (new_row, new_col)
                 if (
-                    (state not in self.cliff_positions)
-                    and (state != self.start_state)
-                    and (state != self.terminal_state)
+                        (state not in self.cliff_positions)
+                        and (state != self.start_state)
+                        and (state != self.terminal_state)
                 ):
                     self._cliff[new_row, new_col] = True
                     if not self.is_valid():
@@ -44,7 +44,7 @@ class CliffWalking(CliffWalkingEnv):
         self.P = {}
         for s in range(self.nS):
             position = np.unravel_index(s, self.shape)
-            self.P[s] = {a: [] for a in range(self.nA)}
+            self.P[s] = {action: [] for action in range(self.nA)}
             self.P[s][UP] = self._calculate_transition_prob(position, [-1, 0])
             self.P[s][RIGHT] = self._calculate_transition_prob(position, [0, 1])
             self.P[s][DOWN] = self._calculate_transition_prob(position, [1, 0])
@@ -59,8 +59,6 @@ class CliffWalking(CliffWalkingEnv):
 
         terminal_state = (self.shape[0] - 1, self.shape[1] - 1)
         is_terminated = tuple(new_position) == terminal_state
-
-
 
         return [(1 / 3, new_state, -0.2, is_terminated)]
 
@@ -91,13 +89,13 @@ class CliffWalking(CliffWalkingEnv):
         if self.is_hardmode:
             match action:
                 case 0:
-                    action = np.random.choice([0, 1, 3], p=[1/2, 1/4, 1/4])
+                    action = np.random.choice([0, 1, 3], p=[1 / 2, 1 / 4, 1 / 4])
                 case 1:
-                    action = np.random.choice([0, 1, 2], p=[1/4, 1/2, 1/4])
+                    action = np.random.choice([0, 1, 2], p=[1 / 4, 1 / 2, 1 / 4])
                 case 2:
-                    action = np.random.choice([1, 2, 3], p=[1/4, 1/2, 1/4])
+                    action = np.random.choice([1, 2, 3], p=[1 / 4, 1 / 2, 1 / 4])
                 case 3:
-                    action = np.random.choice([0, 2, 3], p=[1/4, 1/4, 1/2])
+                    action = np.random.choice([0, 2, 3], p=[1 / 4, 1 / 4, 1 / 2])
 
         return super().step(action)
 
@@ -209,12 +207,12 @@ def policy_evaluation(policy):
             else:
                 for action in range(env.nA):
                     ans = 0
-                    for probability, next_state, reward, done in env.P[state][action]:
-                        ans += (1/2)*(reward+gamma*old_Vp[next_state])
-                    for probability, next_state, reward, done in env.P[state][(action - 1)%4]:
-                        ans += (1/4)*(reward+gamma*old_Vp[next_state])
-                    for probability, next_state, reward, done in env.P[state][(action+1)%4]:
-                        ans += (1/4)*(reward+gamma*old_Vp[next_state])
+                    for probability, state_next, rewards, complete in env.P[state][action]:
+                        ans += (1 / 2) * (rewards + gamma * old_Vp[state_next])
+                    for probability, state_next, rewards, complete in env.P[state][(action - 1) % 4]:
+                        ans += (1 / 4) * (rewards + gamma * old_Vp[state_next])
+                    for probability, state_next, rewards, complete in env.P[state][(action + 1) % 4]:
+                        ans += (1 / 4) * (rewards + gamma * old_Vp[state_next])
                     Qp[state][action] = ans
 
                 Vp[state] = Qp[state][int(policy[state])]
@@ -230,7 +228,6 @@ def policy_evaluation(policy):
 
 
 def policy_iteration():
-
     policy = np.zeros(env.nS)
     t = 1
     converged = False
@@ -254,7 +251,7 @@ def policy_iteration():
         delta = np.max(np.abs(policy - old_policy))
         if delta < theta:
             converged = True
-        t = t+1
+        t = t + 1
 
     return policy
 
@@ -270,7 +267,7 @@ for i in range(10):
 gamma = 0.99
 theta = 1e-4
 
-Policy= policy_iteration()
+Policy = policy_iteration()
 
 print("Optimal policy:")
 print(Policy)
@@ -288,7 +285,7 @@ for i in range(max_iter_number):
     while True:
         # Perform the action and receive feedback from the environment
         next_state, reward, done, truncated, info = env.step(Action)
-        print(f'{next_state,reward, done, truncated, info}')
+        print(f'{next_state, reward, done, truncated, info}')
         Action = Policy[next_state]
         if info['prob'] == 1.0:
             break
@@ -296,7 +293,6 @@ for i in range(max_iter_number):
             d = d + 1
             env.reset()
             break
-
 
 print(d)
 # Close the environment
