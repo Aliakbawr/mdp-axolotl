@@ -91,13 +91,13 @@ class CliffWalking(CliffWalkingEnv):
         if self.is_hardmode:
             match action:
                 case 0:
-                    action = np.random.choice([0, 1, 3], p=[1, 0, 0])
+                    action = np.random.choice([0, 1, 3], p=[1/2, 1/4, 1/4])
                 case 1:
-                    action = np.random.choice([0, 1, 2], p=[0, 1, 0])
+                    action = np.random.choice([0, 1, 2], p=[1/4, 1/2, 1/4])
                 case 2:
-                    action = np.random.choice([1, 2, 3], p=[0, 1, 0])
+                    action = np.random.choice([1, 2, 3], p=[1/4, 1/2, 1/4])
                 case 3:
-                    action = np.random.choice([0, 2, 3], p=[0, 0, 1])
+                    action = np.random.choice([0, 2, 3], p=[1/4, 1/4, 1/2])
 
         return super().step(action)
 
@@ -198,27 +198,35 @@ def policy_evaluation(policy):
     t = 1
 
 
-    while t < 10000 and not converged:
+
+
+    while t < 1000 and not converged:
         delta = 0
+        old_Vp = Vp.copy()
+
         for state in range(env.nS):
-            # if cliffs.__contains__(state):
-            #     Vp[state] = -1
-            #     break
+            if cliffs.__contains__(state):
+                Vp[state] = -100
+            elif state == 47:
+                Vp[state] = 2000
+            else:
+                for action in range(env.nA):
+                    ans = 0
+                    print(env.P[state][action])
+                    for i in range(4):
+                        print(env.P[state][i])
+                        probability, next_state, reward, done = env.P[state][i]
+                        ans += probability*(reward+gamma*old_Vp[next_state])
+                        Qp[state][action] = ans
 
-            old_Vp = Vp[state]
-            for action in range(env.nA):
-                ans = 0
-                for probability, next_state, reward, done in env.P[state][action]:
-                    ans += probability*(reward+gamma*Vp[next_state])
-
-                Qp[state][action] = ans
-            Vp[state] = Qp[state][int(policy[state])]
+                Vp[state] = Qp[state][int(policy[state])]
 
             # Calculate the change in utility value
             delta = np.max(np.abs(old_Vp - Vp[state]))
 
         if delta < theta:
             converged = True
+        t+=1
 
     return Vp, Qp
 
@@ -228,8 +236,8 @@ def policy_iteration():
     policy = np.zeros(env.nS)
     t = 1
     converged = False
-    while t < 1000 and not converged:
-        old_policy = policy
+    while t < 100 and not converged:
+        old_policy = policy.copy()
         Vp, Qp = policy_evaluation(policy)
         for state in range(env.nS):
             act = -1
@@ -254,7 +262,7 @@ def policy_iteration():
 
 
 # Create an environment
-env = CliffWalking(render_mode="human")
+env = CliffWalking(render_mode="fsfvv")
 observation, info = env.reset(seed=30)
 cliffs = list()
 for i in range(10):
