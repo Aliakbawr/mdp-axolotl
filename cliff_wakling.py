@@ -197,9 +197,6 @@ def policy_evaluation(policy):
     converged = False
     t = 1
 
-
-
-
     while t < 1000 and not converged:
         delta = 0
         old_Vp = Vp.copy()
@@ -212,12 +209,13 @@ def policy_evaluation(policy):
             else:
                 for action in range(env.nA):
                     ans = 0
-                    print(env.P[state][action])
-                    for i in range(4):
-                        print(env.P[state][i])
-                        probability, next_state, reward, done = env.P[state][i]
-                        ans += probability*(reward+gamma*old_Vp[next_state])
-                        Qp[state][action] = ans
+                    for probability, next_state, reward, done in env.P[state][action]:
+                        ans += (1/2)*(reward+gamma*old_Vp[next_state])
+                    for probability, next_state, reward, done in env.P[state][(action - 1)%4]:
+                        ans += (1/4)*(reward+gamma*old_Vp[next_state])
+                    for probability, next_state, reward, done in env.P[state][(action+1)%4]:
+                        ans += (1/4)*(reward+gamma*old_Vp[next_state])
+                    Qp[state][action] = ans
 
                 Vp[state] = Qp[state][int(policy[state])]
 
@@ -236,7 +234,7 @@ def policy_iteration():
     policy = np.zeros(env.nS)
     t = 1
     converged = False
-    while t < 100 and not converged:
+    while t < 1000 and not converged:
         old_policy = policy.copy()
         Vp, Qp = policy_evaluation(policy)
         for state in range(env.nS):
